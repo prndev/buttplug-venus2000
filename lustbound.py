@@ -1,5 +1,6 @@
 import asyncio
 import websockets
+import websockets.asyncio.client
 import json
 import time
 import collections
@@ -139,7 +140,7 @@ class VibrationHandler:
                 self.rising_edge_line.setValue(self.rising_timestamp_ms)
             self.plot_app.processEvents()
 
-async def handle_client(websocket, args, set_intensity):
+async def handle_client(websocket, args, set_intensity, forwarder):
     try:
         message_version = 2
         client_connect_timestamp_ms = time.time_ns() // 1_000_000
@@ -153,9 +154,12 @@ async def handle_client(websocket, args, set_intensity):
                 #print("Stop by timeout")
                 vibration_handler.stop()
             if (message):
+                if (forwarder):
+                    await forwarder.send(message)
+                    print("|", await forwarder.recv())
                 message = json.loads(message)
                 message = message[0]
-                #print("<", message)
+                print("<", message)
                 message_id = next(iter(message.values()))["Id"]
                 response = [{"Ok":{"Id":message_id}}]
                 if ("RequestServerInfo" in message):
@@ -182,9 +186,11 @@ async def handle_client(websocket, args, set_intensity):
     except websockets.exceptions.ConnectionClosed:
         pass
 
-async def main(args, set_intensity):
+async def main(args, set_intensity, forwarder):
+    if (forwarder):
+        forwarder = await websockets.asyncio.client.connect(forwarder)
     async def handler(websocket):
-        await handle_client(websocket, args, set_intensity)
+        await handle_client(websocket, args, set_intensity, forwarder)
     server = await websockets.serve(handler, "localhost", args.port)
     await server.wait_closed()
 
@@ -203,6 +209,7 @@ if __name__ == "__main__":
     parser.add_argument('--cycle_max_samples', type=int, default=4)
     parser.add_argument('--amplitude_sample_ms', type=int, default=4000)
     parser.add_argument('--minimum_frametime_secs', type=float, default=0.1)
+    parser.add_argument('--forwarder', type=str, help='A websocket URL to copy communication to (e.g. "ws://localhost:12346"). Extremely limited: This will only work with a server capable of handling the obsolete message version 2 format. Only the first toy will receive VibrateCmd messages.')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
     
@@ -216,4 +223,4 @@ if __name__ == "__main__":
     set_intensity(0.0) # start turned off
 
     # now run the server
-    asyncio.run(main(args, set_intensity))
+    asyncio.run(main(args, set_intensity, args.forwarder))
