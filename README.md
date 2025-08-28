@@ -35,7 +35,7 @@ These models have been prepared for a Bambulab X1C with PLA-CF. Adjustments migh
 
 ## Usage
 
-Have [websockets](https://pypi.org/project/websockets/) installed in your python environment.
+Have [websockets 13.1](https://pypi.org/project/websockets/) and [pyserial 3.5](https://pypi.org/project/pyserial/) installed in your python environment (via pip I presume).
 
 Execute `lustbound.py`. The servo will turn the knob in the "off" position. If this breaks the gear, the knob or the servo, you installed it the wrong way around and must admit defeat.
 

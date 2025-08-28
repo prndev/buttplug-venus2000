@@ -5,6 +5,7 @@ import json
 import time
 import collections
 from serial import Serial
+import serial.tools.list_ports
 import argparse
 import collections
 try:
@@ -195,8 +196,11 @@ async def main(args, set_intensity, forwarder):
     await server.wait_closed()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog='Venus2000 Adapter buttplug.io Server')
-    parser.add_argument('--serial', type=str, default='/dev/ttyACM0')
+    # quick and dirty way to automatically select COMx on Windows but not ttySx on Linux 
+    # I doubt anyone will use an actual serial port and if they do, they can specify explicitly
+    default_serial_port = next((comport.device for comport in serial.tools.list_ports.comports() if 'ttyS' not in comport.device), None)
+    parser = argparse.ArgumentParser(prog='"Venus for Men" Adapter buttplug.io Server')
+    parser.add_argument('--serial', type=str, default=default_serial_port)
     parser.add_argument('--baud', type=int, default=9600)
     parser.add_argument('--port', type=int, default=12345)
     parser.add_argument('--servo_max_degrees', type=int, default=180)
